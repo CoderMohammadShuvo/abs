@@ -1,0 +1,1783 @@
+openapi: 3.0.3
+info:
+  title: ABS Backend API
+  description: |
+    Complete API documentation for ABS (Academic & Business Solutions) backend system.
+    
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-token>
+    ```
+    
+    ## Test Credentials
+    - **Super Admin**: admin@abs.com / Admin@123
+    - **Teacher**: teacher@abs.com / Teacher@123
+    - **Student**: student@abs.com / Student@123
+    
+  version: 1.0.0
+  contact:
+    name: ABS API Support
+    email: support@abs.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: http://localhost:3001
+    description: Alternative local server
+
+tags:
+  - name: Authentication
+    description: User authentication and profile management
+  - name: Admin - Users
+    description: Admin user management operations
+  - name: Courses
+    description: Course management operations
+  - name: Modules & Content
+    description: Module and content management
+  - name: Enrollments & Certificates
+    description: Course enrollment and certificate management
+  - name: Quiz Management
+    description: Quiz creation, submission, and analytics
+  - name: Project & Task Management
+    description: Project and task management with assignments and feedback
+  - name: Journal & Article Management
+    description: Academic journal and article management with API sync
+  - name: Scholarship & Application Management
+    description: Scholarship management and student application processing
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Error message"
+          
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation successful"
+        data:
+          type: object
+          
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [ADMIN, SUPER_ADMIN, TEACHER, STUDENT, VISITOR, SHOP_MANAGER, ACCOUNTANT]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        profile:
+          $ref: '#/components/schemas/Profile'
+          
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        bio:
+          type: string
+        contactNumber:
+          type: string
+        gender:
+          type: string
+        status:
+          type: string
+          
+    Course:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        level:
+          type: string
+        isPaid:
+          type: boolean
+        price:
+          type: number
+        duration:
+          type: number
+        thumbnailUrl:
+          type: string
+        teacher:
+          $ref: '#/components/schemas/User'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+            
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          
+    Module:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        order:
+          type: number
+        courseId:
+          type: string
+          format: uuid
+        courseContents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Content'
+            
+    Content:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [VIDEO, PDF, LIVE, TEXT, QUIZ]
+        videoUrl:
+          type: string
+        pdfUrl:
+          type: string
+        liveUrl:
+          type: string
+        content:
+          type: string
+        duration:
+          type: number
+        order:
+          type: number
+
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with STUDENT role by default
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - fullName
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                fullName:
+                  type: string
+                  minLength: 2
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login with email and password
+      description: Authenticate user and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                          user:
+                            $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Authentication
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                bio:
+                  type: string
+                contactNumber:
+                  type: string
+                gender:
+                  type: string
+                dateOfBirth:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+                        
+  /api/auth/password:
+    put:
+      tags:
+        - Authentication
+      summary: Change password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+                - confirmNewPassword
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+                confirmNewPassword:
+                  type: string
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Invalid current password or passwords don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/auth/refresh-token:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                            
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout current user
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+                
+  /api/admin/users:
+    get:
+      tags:
+        - Admin - Users
+      summary: List all users
+      description: Get paginated list of users with filtering options (ADMIN, SUPER_ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [ADMIN, SUPER_ADMIN, TEACHER, STUDENT, VISITOR, SHOP_MANAGER, ACCOUNTANT]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          users:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/User'
+                          pagination:
+                            type: object
+                            properties:
+                              page:
+                                type: integer
+                              limit:
+                                type: integer
+                              total:
+                                type: integer
+                              totalPages:
+                                type: integer
+    post:
+      tags:
+        - Admin - Users
+      summary: Create user manually
+      description: Create a new user (ADMIN, SUPER_ADMIN only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - fullName
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                fullName:
+                  type: string
+                role:
+                  type: string
+                  enum: [ADMIN, SUPER_ADMIN, TEACHER, STUDENT, VISITOR, SHOP_MANAGER, ACCOUNTANT]
+                isActive:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+                        
+  /api/admin/users/{id}:
+    get:
+      tags:
+        - Admin - Users
+      summary: Get user details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+    put:
+      tags:
+        - Admin - Users
+      summary: Update user info
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                fullName:
+                  type: string
+                role:
+                  type: string
+                isActive:
+                  type: boolean
+                password:
+                  type: string
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+    delete:
+      tags:
+        - Admin - Users
+      summary: Soft delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+                
+  /api/admin/users/{id}/role:
+    patch:
+      tags:
+        - Admin - Users
+      summary: Change user role
+      description: Change user role (SUPER_ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum: [ADMIN, SUPER_ADMIN, TEACHER, STUDENT, VISITOR, SHOP_MANAGER, ACCOUNTANT]
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+                        
+  /api/admin/stats:
+    get:
+      tags:
+        - Admin - Users
+      summary: Get dashboard stats
+      description: Get aggregated statistics for admin dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          users:
+                            type: object
+                          enrollments:
+                            type: object
+                          courses:
+                            type: object
+                          revenue:
+                            type: object
+                            
+  /api/courses:
+    get:
+      tags:
+        - Courses
+      summary: List all courses
+      description: Get paginated list of courses with filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+        - name: level
+          in: query
+          schema:
+            type: string
+        - name: isPaid
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          courses:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Course'
+                          pagination:
+                            type: object
+    post:
+      tags:
+        - Courses
+      summary: Create course
+      description: Create a new course (TEACHER, ADMIN only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - slug
+                - description
+              properties:
+                title:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                level:
+                  type: string
+                isPaid:
+                  type: boolean
+                price:
+                  type: number
+                duration:
+                  type: number
+                thumbnailUrl:
+                  type: string
+                categoryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Course created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Course'
+                        
+  /api/courses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get course details
+      description: Get course by ID or slug
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Course ID or slug
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Course details retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Course'
+    put:
+      tags:
+        - Courses
+      summary: Update course
+      description: Update course (TEACHER, ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                level:
+                  type: string
+                isPaid:
+                  type: boolean
+                price:
+                  type: number
+                duration:
+                  type: number
+                thumbnailUrl:
+                  type: string
+                categoryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Course updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Course'
+    delete:
+      tags:
+        - Courses
+      summary: Delete course
+      description: Soft delete course (ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Course deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+                
+  /api/courses/categories:
+    get:
+      tags:
+        - Courses
+      summary: List course categories
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+    post:
+      tags:
+        - Courses
+      summary: Add category
+      description: Create a new category (ADMIN only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Category'
+                        
+  /api/modules/{id}:
+    get:
+      tags:
+        - Modules & Content
+      summary: Get module details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Module details retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Module'
+                        
+  /api/modules/{id}/contents:
+    post:
+      tags:
+        - Modules & Content
+      summary: Add content to module
+      description: Add content (video/pdf/live) to module (TEACHER only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - type
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [VIDEO, PDF, LIVE, TEXT, QUIZ]
+                videoUrl:
+                  type: string
+                pdfUrl:
+                  type: string
+                liveUrl:
+                  type: string
+                content:
+                  type: string
+                duration:
+                  type: number
+                order:
+                  type: number
+      responses:
+        '201':
+          description: Content created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Content'
+                        
+  /api/modules/{id}/contents/{contentId}:
+    put:
+      tags:
+        - Modules & Content
+      summary: Update content
+      description: Update content (TEACHER only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                videoUrl:
+                  type: string
+                duration:
+                  type: number
+      responses:
+        '200':
+          description: Content updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Content'
+    delete:
+      tags:
+        - Modules & Content
+      summary: Delete content
+      description: Delete content (TEACHER, ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Content deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+                
+  /api/contents/{id}/media:
+    get:
+      tags:
+        - Modules & Content
+      summary: List attached media
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Media list retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          
+  /api/contents/{id}/quiz:
+    post:
+      tags:
+        - Modules & Content
+      summary: Add quiz to content
+      description: Add quiz to content (TEACHER only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                passingScore:
+                  type: number
+                  default: 70
+                timeLimit:
+                  type: number
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: string
+                      correctAnswer:
+                        type: number
+                      points:
+                        type: number
+      responses:
+        '201':
+          description: Quiz created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        
+  /api/enrollments:
+    get:
+      tags:
+        - Enrollments & Certificates
+      summary: List enrolled courses
+      description: Get list of courses the student is enrolled in (STUDENT only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollments retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          enrollments:
+                            type: array
+                            items:
+                              type: object
+                          pagination:
+                            type: object
+    post:
+      tags:
+        - Enrollments & Certificates
+      summary: Enroll in a course
+      description: Enroll the current student in a course (STUDENT only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - courseId
+              properties:
+                courseId:
+                  type: string
+      responses:
+        '201':
+          description: Enrolled successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+        '409':
+          description: Already enrolled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/enrollments/{id}:
+    get:
+      tags:
+        - Enrollments & Certificates
+      summary: Get enrollment details
+      description: Get detailed information about an enrollment (STUDENT only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollment details retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        
+  /api/enrollments/{id}/progress:
+    patch:
+      tags:
+        - Enrollments & Certificates
+      summary: Update course progress
+      description: Update progress for an enrollment (STUDENT only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - progress
+              properties:
+                progress:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                completedContentIds:
+                  type: array
+                  items:
+                    type: string
+                lastAccessedContentId:
+                  type: string
+      responses:
+        '200':
+          description: Progress updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        
+  /api/enrollments/{id}/certificate:
+    get:
+      tags:
+        - Enrollments & Certificates
+      summary: Get certificate
+      description: Get certificate for completed enrollment (STUDENT only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate retrieved/generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          certId:
+                            type: string
+                          courseName:
+                            type: string
+                          studentName:
+                            type: string
+                          instructorName:
+                            type: string
+                          issuedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Course not completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/certificates/{certId}:
+    get:
+      tags:
+        - Enrollments & Certificates
+      summary: Verify certificate
+      description: Verify a certificate by ID (PUBLIC)
+      parameters:
+        - name: certId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate verified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          certId:
+                            type: string
+                          studentName:
+                            type: string
+                          courseName:
+                            type: string
+                          instructorName:
+                            type: string
+                          issuedAt:
+                            type: string
+                            format: date-time
+                          isValid:
+                            type: boolean
+        '404':
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/certificates/generate:
+    post:
+      tags:
+        - Enrollments & Certificates
+      summary: Generate certificate
+      description: Generate certificate for completed course (SYSTEM only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - courseId
+                - systemKey
+              properties:
+                userId:
+                  type: string
+                courseId:
+                  type: string
+                systemKey:
+                  type: string
+                  description: Internal system key for security
+      responses:
+        '201':
+          description: Certificate generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/Error'
+                
+  /api/quizzes:
+    post:
+      tags:
+        - Quiz Management
+      summary: Create quiz
+      description: Create a new quiz (TEACHER, ADMIN only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - courseId
+                - questions
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                courseId:
+                  type: string
+                contentId:
+                  type: string
+                passingScore:
+                  type: number
+                  default: 70
+                timeLimit:
+                  type: number
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: string
+                      correctAnswer:
+                        type: number
+                      points:
+                        type: number
+      responses:
+        '201':
+          description: Quiz created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        
+  /api/quizzes/{id}:
+    get:
+      tags:
+        - Quiz Management
+      summary: Get quiz
+      description: Get quiz details (STUDENT sees questions without answers)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+    put:
+      tags:
+        - Quiz Management
+      summary: Update quiz
+      description: Update quiz (TEACHER only for own courses)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                passingScore:
+                  type: number
+                timeLimit:
+                  type: number
+                questions:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Quiz updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+    delete:
+      tags:
+        - Quiz Management
+      summary: Delete quiz
+      description: Delete quiz (ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+                
+  /api/quizzes/{id}/submit:
+    post:
+      tags:
+        - Quiz Management
+      summary: Submit quiz answers
+      description: Submit quiz and get results (STUDENT only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - answers
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      questionIndex:
+                        type: number
+                      selectedAnswer:
+                        type: number
+      responses:
+        '201':
+          description: Quiz submitted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          score:
+                            type: number
+                          passed:
+                            type: boolean
+                          totalQuestions:
+                            type: number
+                          correctAnswers:
+                            type: number
+                            
+  /api/quiz-results/{id}:
+    get:
+      tags:
+        - Quiz Management
+      summary: Get quiz result
+      description: Get quiz result details (STUDENT for own, TEACHER for their courses)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz result retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        
+  /api/teacher/quizzes/results:
+    get:
+      tags:
+        - Quiz Management
+      summary: View quiz analytics
+      description: Get quiz analytics and statistics (TEACHER, ADMIN only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: quizId
+          in: query
+          schema:
+            type: string
+        - name: courseId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Analytics retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          summary:
+                            type: object
+                            properties:
+                              totalSubmissions:
+                                type: number
+                              passedCount:
+                                type: number
+                              failedCount:
+                                type: number
+                              passRate:
+                                type: number
+                              averageScore:
+                                type: number
+                          quizStats:
+                            type: array
+                            items:
+                              type: object
+                          recentResults:
+                            type: array
+                            items:
+                              type: object

@@ -1,0 +1,939 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  SUPER_ADMIN
+  TEACHER
+  STUDENT
+  VISITOR
+  SHOP_MANAGER
+  ACCOUNTANT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  NEEDS_CORRECTION
+}
+
+enum QuizType {
+  MCQ
+  CQ
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+enum PaymentMethod {
+  SSL_COMMERZ
+  BKASH
+  COD
+  WALLET
+}
+
+enum MediaType {
+  VIDEO
+  PDF
+  IMAGE
+  DOC
+  XLS
+  CSV
+  NOTE
+}
+
+enum BlogType {
+  BLOG
+  NEWS
+}
+
+enum DiscountType {
+  FLAT
+  PERCENTAGE
+}
+
+enum ContentType {
+  VIDEO
+  PDF
+  NOTE
+  QUIZ
+  LIVE_CLASS
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  APPROVED
+  REJECTED
+}
+
+enum MediaOwnerType {
+  COURSE
+  MODULE
+  CONTENT
+  TASK
+  BLOG
+  BOOK
+  USER_PROFILE
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id                     String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId                 String          @unique
+  email                  String          @unique
+  passwordHash           String
+  role                   UserRole        @default(STUDENT)
+  isActive               Boolean         @default(true)
+  lastLogin              DateTime?
+  lastPasswordChange     DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  deletedAt              DateTime?
+
+  profile                Profile?
+  enrollments            Enrollment[]
+  tasksAssigned          TaskAssignment[]
+  projectsOwned          Project[]       @relation("ProjectOwner")
+  orders                 Order[]
+  payments               Payment[]
+  auditLogs              AuditLog[]
+  publications           Publication[]
+  addresses              Address[]
+  certificates           Certificate[]
+  authProviders          AuthProvider[]
+  blogsAuthored          BlogPost[]      @relation("BlogAuthor")
+  comments               BlogComment[]
+  mediaUploaded          Media[]         @relation("UploadedMedia")
+  accountEntries         AccountEntry[]
+  couponUsages           CouponUsage[]
+  createdCoupons         Coupon[]        @relation("CouponCreator")
+  consultancyRequests    ConsultancyRequest[]
+  scholarshipApplications ScholarshipApplication[]
+  journalSyncLogs        JournalSyncLog[]
+  editorialMembers       EditorialMember[]
+  quizResults            QuizResult[]
+  conferenceSubmissions  ConferenceSubmission[]
+  createdFlashSales      FlashSale[]
+  coursesTaught          Course[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model Profile {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @unique @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fullName       String
+  avatarUrl      String?
+  bio            String?
+  education      Json?
+  skills         Json?
+  socialLinks    Json?
+  linkedinUrl    String?
+  researchGateUrl String?
+  contactNumber  String?
+  gender         String?
+  dateOfBirth    DateTime?
+  address        String?
+  status         String?  // active/inactive
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  @@map("profiles")
+}
+
+model AuthProvider {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  provider   String
+  providerId String
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt  DateTime @default(now())
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("auth_providers")
+}
+
+model Category {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String           @unique
+  description String?
+  parentId    String?          @db.ObjectId
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now())
+
+  parent      Category?        @relation("CategoryParent", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    Category[]       @relation("CategoryParent")
+  courseLinks CourseCategory[]
+  bookLinks   BookCategory[]
+  blogLinks   BlogCategory[]
+  couponLinks CouponCategory[]
+  journalLinks JournalCategory[]
+
+  @@map("categories")
+}
+
+model Course {
+  id            String       @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  slug          String       @unique
+  description   String?
+  price         Float?     
+  isFeatured    Boolean      @default(false)
+  teacherId     String?      @db.ObjectId
+  thumbnail     String?
+  durationHours Float?     
+  level         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  teacher       User?        @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  modules       CourseModule[]
+  enrollments   Enrollment[]
+  quizzes       Quiz[]
+  certificates  Certificate[]
+  categories    CourseCategory[]
+
+  @@map("courses")
+}
+
+model CourseCategory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  courseId    String   @db.ObjectId
+  categoryId  String   @db.ObjectId
+
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([courseId, categoryId])
+  @@map("course_categories")
+}
+
+model CourseModule {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  courseId       String         @db.ObjectId
+  title          String
+  description    String?
+  order          Int            @default(0)
+  isOptional     Boolean        @default(false)
+  parentModuleId String?        @db.ObjectId
+  moduleType     String?        // LECTURE, LAB, ASSIGNMENT
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  course         Course         @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  courseContents CourseContent[]
+  parentModule   CourseModule?  @relation("SubModules", fields: [parentModuleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subModules     CourseModule[] @relation("SubModules")
+
+  @@index([courseId, order])
+  @@map("course_modules")
+}
+
+model CourseContent {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  moduleId    String         @db.ObjectId
+  title       String
+  description String?
+  type        ContentType
+  url         String?
+  duration    Int?
+  order       Int            @default(0)
+  isFree      Boolean        @default(false)
+  isLive      Boolean        @default(false)
+  liveUrl     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  module      CourseModule   @relation(fields: [moduleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  media       Media[]
+  quiz        Quiz?          @relation("ModuleQuiz")
+
+  @@index([moduleId, order])
+  @@map("course_contents")
+}
+
+model Enrollment {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String       @db.ObjectId
+  courseId       String       @db.ObjectId
+  progress       Float      @default(0) 
+  moduleProgress Json?
+  paid           Boolean      @default(false)
+  enrolledAt     DateTime     @default(now())
+  completedAt    DateTime?
+  certificateId  String?      @db.ObjectId
+  paymentId      String?      @db.ObjectId
+  deletedAt      DateTime?
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course         Course       @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  certificate    Certificate? @relation(fields: [certificateId], references: [id], onDelete: SetNull)
+  payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, courseId])
+  @@index([userId, enrolledAt])
+  @@map("enrollments")
+}
+
+model Quiz {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  type        QuizType
+  questions   Json
+  timeLimit   Int?
+  shuffleQuestions Boolean?  @default(false)
+  courseId    String?        @db.ObjectId
+  contentId   String?        @unique @db.ObjectId
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  course      Course?        @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  content     CourseContent? @relation("ModuleQuiz", fields: [contentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  results     QuizResult[]
+
+  @@index([courseId])
+  @@map("quizzes")
+}
+
+model QuizResult {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  quizId      String   @db.ObjectId
+  score       Float  
+  answers     Json
+  status      String   @default("PENDING")
+  submittedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("quiz_results")
+}
+
+model Project {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  creatorId   String    @db.ObjectId
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  creator     User      @relation("ProjectOwner", fields: [creatorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasks       Task[]
+
+  @@map("projects")
+}
+
+model Task {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  projectId     String      @db.ObjectId
+  title         String
+  description   String?
+  status        TaskStatus  @default(PENDING)
+  dueAt         DateTime?
+  completedAt   DateTime?
+  feedback      Json?
+  revisionCount Int         @default(0)
+  priority      Priority    @default(MEDIUM)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignments   TaskAssignment[]
+  media         Media[]     @relation("TaskMedia")
+
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  taskId      String   @db.ObjectId
+  userId      String   @db.ObjectId
+  assignedAt  DateTime @default(now())
+  statusChangeAt DateTime?
+
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([taskId, userId])
+  @@map("task_assignments")
+}
+
+model Media {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  url            String
+  type           MediaType
+  size           Int?
+  ownerId        String?        @db.ObjectId
+  ownerType      MediaOwnerType?
+  thumbnailUrl   String?
+  isPublic       Boolean        @default(true)
+  uploadedById   String?        @db.ObjectId
+  uploadedAt     DateTime       @default(now())
+
+  uploadedBy     User?          @relation("UploadedMedia", fields: [uploadedById], references: [id], onDelete: SetNull)
+  
+  taskId         String?        @db.ObjectId
+  task           Task?          @relation("TaskMedia", fields: [taskId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  courseContentId String?       @db.ObjectId
+  courseContent  CourseContent? @relation(fields: [courseContentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ownerId, ownerType])
+  @@map("media")
+}
+
+model Journal {
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  title            String
+  slug             String            @unique
+  issn             String?           @unique
+  description      String
+  categories       JournalCategory[]
+  apiUrl           String?
+  apiToken         String?
+  guideForAuthors  String?
+  callForPapers    String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  volumes          Volume[]
+  syncLogs         JournalSyncLog[]
+  editorialMembers EditorialMember[]
+
+  @@map("journals")
+}
+
+model JournalCategory {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  journalId  String   @db.ObjectId
+  categoryId String   @db.ObjectId
+
+  journal    Journal  @relation(fields: [journalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([journalId, categoryId])
+  @@map("journal_categories")
+}
+
+model Volume {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  journalId String   @db.ObjectId
+  number    Int
+  year      Int
+  issues    Issue[]
+
+  journal   Journal @relation(fields: [journalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("volumes")
+}
+
+model Issue {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  volumeId  String   @db.ObjectId
+  number    Int
+  publishedAt DateTime?
+  articles  Article[]
+
+  volume    Volume   @relation(fields: [volumeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("issues")
+}
+
+model Article {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  issueId     String   @db.ObjectId
+  title       String
+  authors     Json
+  doi         String?
+  abstract    String
+  pdfUrl      String?
+  publishedAt DateTime?
+  keywords    String[]
+  citations   Int?
+  status      ArticleStatus @default(DRAFT)
+
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("articles")
+}
+
+model JournalSyncLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  journalId  String   @db.ObjectId
+  userId     String?  @db.ObjectId
+  syncedAt   DateTime @default(now())
+  status     String
+  details    Json?
+
+  journal    Journal  @relation(fields: [journalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("journal_sync_logs")
+}
+
+model EditorialMember {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  journalId  String   @db.ObjectId
+  userId     String?  @db.ObjectId
+  name       String
+  bio        String?
+  position   String
+  createdAt  DateTime @default(now())
+
+  journal    Journal  @relation(fields: [journalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("editorial_members")
+}
+
+model Publication {
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String             @db.ObjectId
+  title       String
+  link        String
+  publishedAt DateTime?
+  conferenceId String?           @db.ObjectId
+  createdAt   DateTime           @default(now())
+  deletedAt   DateTime?
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  conference  Conference?        @relation(fields: [conferenceId], references: [id], onDelete: SetNull)
+  sdgs        PublicationSDG[]
+
+  @@map("publications")
+}
+
+model SDG {
+  id            String              @id @default(auto()) @map("_id") @db.ObjectId
+  number        Int                 @unique
+  title         String
+  description   String?
+  publications  PublicationSDG[]
+
+  @@map("sdgs")
+}
+
+model PublicationSDG {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  publicationId String        @db.ObjectId
+  sdgId         String        @db.ObjectId
+
+  publication   Publication   @relation(fields: [publicationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sdg           SDG           @relation(fields: [sdgId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([publicationId, sdgId])
+  @@map("publication_sdgs")
+}
+
+model Scholarship {
+  id                 String                 @id @default(auto()) @map("_id") @db.ObjectId
+  title              String
+  slug               String                 @unique
+  eligibility        Json
+  eligibilitySummary String?
+  applicationDetails Json
+  isActive           Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  applications       ScholarshipApplication[]
+
+  @@map("scholarships")
+}
+
+model ScholarshipApplication {
+  id             String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String            @db.ObjectId
+  scholarshipId  String            @db.ObjectId
+  formData       Json
+  status         ApplicationStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  scholarship    Scholarship       @relation(fields: [scholarshipId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, scholarshipId])
+  @@map("scholarship_applications")
+}
+
+model Conference {
+  id           String                     @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  slug         String                     @unique
+  details      Json?
+  eventDate    DateTime?
+  submissionDeadline DateTime?
+  location     String?
+  createdAt    DateTime                   @default(now())
+  deletedAt    DateTime?
+
+  publications Publication[]
+  submissions  ConferenceSubmission[]
+
+  @@map("conferences")
+}
+
+model ConferenceSubmission {
+  id             String            @id @default(auto()) @map("_id") @db.ObjectId
+  conferenceId   String            @db.ObjectId
+  userId         String?           @db.ObjectId
+  formData       Json
+  status         ApplicationStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+
+  conference     Conference        @relation(fields: [conferenceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("conference_submissions")
+}
+
+model ConsultancyRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String?  @db.ObjectId
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  message     String
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("consultancy_requests")
+}
+
+model BlogPost {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  type        BlogType
+  title       String
+  slug        String         @unique
+  content     String
+  tags        String[]
+  thumbnail   String?
+  authorId    String?        @db.ObjectId
+  publishedAt DateTime?
+  viewCount   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  author      User?          @relation("BlogAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  categories  BlogCategory[]
+  comments    BlogComment[]
+
+  @@map("blog_posts")
+}
+
+model BlogCategory {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  blogPostId   String    @db.ObjectId
+  categoryId   String    @db.ObjectId
+
+  blogPost     BlogPost  @relation(fields: [blogPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category     Category  @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([blogPostId, categoryId])
+  @@map("blog_categories")
+}
+
+model BlogComment {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  blogPostId  String     @db.ObjectId
+  userId      String?    @db.ObjectId
+  content     String
+  createdAt   DateTime   @default(now())
+
+  blogPost    BlogPost   @relation(fields: [blogPostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("blog_comments")
+}
+
+model Certificate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  certId    String   @unique
+  userId    String   @db.ObjectId
+  courseId  String?  @db.ObjectId
+  template  String
+  hash      String
+  verified  Boolean  @default(false)
+  expiryDate DateTime?
+  issuedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  enrollments Enrollment[]
+
+  @@map("certificates")
+}
+
+model Address {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String?  @db.ObjectId
+  street     String
+  city       String
+  postalCode String
+  country    String   @default("Bangladesh")
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders     Order[]
+
+  @@map("addresses")
+}
+
+model AccountEntry {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String?  @db.ObjectId
+  type        String
+  category    String?  // INCOME / EXPENSE
+  amount      Float  
+  description String?
+  recordedAt  DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, recordedAt])
+  @@map("account_entries")
+}
+
+model AuditLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String?  @db.ObjectId
+  entity     String
+  entityId   String?
+  action     String
+  changes    Json?
+  occurredAt DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, occurredAt])
+  @@map("audit_logs")
+}
+
+model Book {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String        @unique
+  author      String?
+  description String?
+  price       Float       
+  stock       Int           @default(0)
+  stockAlertThreshold Int?   
+  isbn        String?       @unique
+  coverUrl    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  orderItems  OrderItem[]
+  flashSales  FlashSale[]
+  couponLinks CouponProduct[]
+  categories  BookCategory[]
+
+  @@map("books")
+}
+
+model BookCategory {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookId     String   @db.ObjectId
+  categoryId String   @db.ObjectId
+
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([bookId, categoryId])
+  @@map("book_categories")
+}
+
+model Order {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String?      @db.ObjectId
+  addressId       String?      @db.ObjectId
+  status          OrderStatus  @default(PENDING)
+  total           Float      
+  paymentMethod   PaymentMethod?
+  trxId           String?
+  couponId        String?      @db.ObjectId
+  courierTracking String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  user            User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  address         Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  items           OrderItem[]
+  payment         Payment?
+  coupon          Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponUsages    CouponUsage[]
+
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String   @db.ObjectId
+  bookId    String   @db.ObjectId
+  quantity  Int
+  unitPrice Float  
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  amount       Float      
+  type         String
+  status       PaymentStatus @default(PENDING)
+  gatewayRef   String?
+  gatewayResponse Json?
+  paidAt       DateTime?
+  createdAt    DateTime     @default(now())
+  orderId      String?      @unique @db.ObjectId
+  userId       String?      @db.ObjectId
+
+  order        Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  enrollments  Enrollment[]
+
+  @@map("payments")
+}
+
+model Coupon {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  code           String           @unique
+  discountType   DiscountType
+  discountValue  Float          
+  minOrderAmount Float          @default(0) 
+  maxDiscountAmount Float?      
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean          @default(true)
+  isDeleted      Boolean          @default(false)
+  usageLimit     Int?
+  perUserLimit   Int?
+  createdById    String?          @db.ObjectId
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  createdBy      User?            @relation("CouponCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  products       CouponProduct[]
+  categories     CouponCategory[]
+  usages         CouponUsage[]
+  orders         Order[]
+
+  @@index([code, isActive])
+  @@map("coupons")
+}
+
+model CouponCategory {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  couponId   String   @db.ObjectId
+  categoryId String   @db.ObjectId
+
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([couponId, categoryId])
+  @@map("coupon_categories")
+}
+
+model CouponProduct {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  couponId  String   @db.ObjectId
+  bookId    String   @db.ObjectId
+
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([couponId, bookId])
+  @@map("coupon_products")
+}
+
+model CouponUsage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  couponId  String   @db.ObjectId
+  userId    String   @db.ObjectId
+  orderId   String?  @db.ObjectId
+  usedAt    DateTime @default(now())
+
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([couponId, userId, orderId])
+  @@map("coupon_usages")
+}
+
+model FlashSale {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookId             String   @db.ObjectId
+  discountPercentage Float  @default(0) 
+  startAt            DateTime
+  endAt              DateTime
+  isActive           Boolean  @default(true)
+  createdById        String?  @db.ObjectId
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  book       Book    @relation(fields: [bookId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy  User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@map("flash_sales")
+}

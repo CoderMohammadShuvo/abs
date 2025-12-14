@@ -1,0 +1,255 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="body-map" viewBox="0 0 300 800">
+    <style>
+    .body-silhouette {
+        fill: #e8b585;
+        stroke: #cc946a;
+        stroke-width: 2;
+    }
+
+    .region {
+        fill: transparent;
+        cursor: pointer;
+        transition: 0.2s ease;
+        stroke: #004bcc41;
+        stroke-width: 1;
+    }
+
+    .region:hover {
+        fill: rgba(0, 120, 255, 0.18);
+    }
+
+    .region.selected {
+        fill: rgba(0, 120, 255, 0.4);
+        stroke: #004bcc;
+        stroke-width: 2;
+    }
+    </style>
+    <path class="body-silhouette" d="M150 60 C120 60 110 100 110 130 L110 165 C95 175 80 190 70 210 C60 230 55 250 55 270 C55 310 65 345 80 375 C50 450 65 650 120 760 L180 760 C235 650 250 450 220 375 C235 345 245 310 245 270 C245 250 240 230 230 210 C220 190 205 175 190 165 L190 130 C190 100 180 60 150 60 Z"/>
+
+    <g class="region" data-part="Left - face">
+      <rect x="120" y="90" width="35" height="80" rx="18"/>
+    </g>
+    <g class="region" data-part="Right - face">
+      <rect x="145" y="90" width="35" height="80" rx="18"/>
+    </g>
+    <g class="region" data-part="Left - ear">
+      <ellipse cx="113" cy="130" rx="8" ry="18"/>
+    </g>
+    <g class="region" data-part="Right - ear">
+      <ellipse cx="187" cy="130" rx="8" ry="18"/>
+    </g>
+    <g class="region" data-part="perioral">
+      <ellipse cx="150" cy="155" rx="22" ry="14"/>
+    </g>
+    <g class="region" data-part="Left - cheek(s)">
+      <ellipse cx="133" cy="128" rx="15" ry="20"/>
+    </g>
+    <g class="region" data-part="Right - cheek(s)">
+      <ellipse cx="167" cy="128" rx="15" ry="20"/>
+    </g>
+    <g class="region" data-part="forehead">
+      <rect x="125" y="70" width="50" height="35" rx="12"/>
+    </g>
+
+    <g class="region" data-part="Left - head">
+      <rect x="120" y="60" width="30" height="80" rx="15"/>
+    </g>
+    <g class="region" data-part="Right - head">
+      <rect x="150" y="60" width="30" height="80" rx="15"/>
+    </g>
+    <g class="region" data-part="Left - eye">
+      <ellipse cx="138" cy="120" rx="6" ry="5"/>
+    </g>
+    <g class="region" data-part="Right - eye">
+      <ellipse cx="162" cy="120" rx="6" ry="5"/>
+    </g>
+    <g class="region" data-part="Left - jaw">
+      <rect x="124" y="148" width="19" height="20" rx="8"/>
+    </g>
+    <g class="region" data-part="Right - jaw">
+      <rect x="157" y="148" width="19" height="20" rx="8"/>
+    </g>
+    <g class="region" data-part="nose">
+      <polygon points="150,118 143,140 157,140"/>
+    </g>
+    <g class="region" data-part="mouth">
+      <ellipse cx="150" cy="162" rx="15" ry="6"/>
+    </g>
+    <g class="region" data-part="teeth">
+      <rect x="140" y="158" width="20" height="4" rx="2"/>
+    </g>
+    <g class="region" data-part="neck">
+      <rect x="135" y="170" width="30" height="22" rx="10"/>
+    </g>
+
+    <g class="region" data-part="back">
+      <rect x="115" y="200" width="70" height="200" rx="25"/>
+    </g>
+    <g class="region" data-part="Left - upper back">
+      <rect x="115" y="200" width="35" height="80" rx="15"/>
+    </g>
+    <g class="region" data-part="Right - upper back">
+      <rect x="150" y="200" width="35" height="80" rx="15"/>
+    </g>
+    <g class="region" data-part="Left - lower back">
+      <rect x="115" y="280" width="35" height="80" rx="15"/>
+    </g>
+    <g class="region" data-part="Right - lower back">
+      <rect x="150" y="280" width="35" height="80" rx="15"/>
+    </g>
+
+    <g class="region" data-part="Left - shoulder(s)">
+      <ellipse cx="105" cy="205" rx="18" ry="14"/>
+    </g>
+    <g class="region" data-part="Right - shoulder(s)">
+      <ellipse cx="195" cy="205" rx="18" ry="14"/>
+    </g>
+
+    <g class="region" data-part="Left - flank">
+      <rect x="100" y="380" width="25" height="25" rx="15"/>
+    </g>
+    <g class="region" data-part="Right - flank">
+      <rect x="170" y="380" width="25" height="25" rx="15"/>
+    </g>
+    <g class="region" data-part="Left - rib(s)">
+      <rect x="100" y="300" width="25" height="25" rx="15"/>
+    </g>
+    <g class="region" data-part="Right - rib(s)">
+      <rect x="170" y="300" width="25" height="25" rx="15"/>
+    </g>
+
+    <g class="region" data-part="Left - arm">
+      <rect x="70" y="190" width="35" height="140" rx="18"/>
+    </g>
+    <g class="region" data-part="Right - arm">
+      <rect x="195" y="190" width="35" height="140" rx="18"/>
+    </g>
+    <g class="region" data-part="Left - axila">
+      <ellipse cx="105" cy="215" rx="15" ry="18"/>
+    </g>
+    <g class="region" data-part="Right - axila">
+      <ellipse cx="195" cy="215" rx="15" ry="18"/>
+    </g>
+    <g class="region" data-part="Left - middle of upper arm">
+      <rect x="75" y="215" width="28" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Right - middle of upper arm">
+      <rect x="197" y="215" width="28" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Left - middle of forearm(s)">
+      <rect x="75" y="265" width="28" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Right - middle of forearm(s)">
+      <rect x="197" y="265" width="28" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Left - elbow(s)">
+      <ellipse cx="87" cy="285" rx="12" ry="10"/>
+    </g>
+    <g class="region" data-part="Right - elbow(s)">
+      <ellipse cx="213" cy="285" rx="12" ry="10"/>
+    </g>
+    <g class="region" data-part="Left - hand(s)">
+      <ellipse cx="82" cy="350" rx="20" ry="30"/>
+    </g>
+    <g class="region" data-part="Right - hand(s)">
+      <ellipse cx="218" cy="350" rx="20" ry="30"/>
+    </g>
+    <g class="region" data-part="Left - finger(s)">
+      <ellipse cx="80" cy="390" rx="15" ry="15"/>
+    </g>
+    <g class="region" data-part="Right - finger(s)">
+      <ellipse cx="220" cy="390" rx="15" ry="15"/>
+    </g>
+    <g class="region" data-part="Left - wrist(s)">
+      <ellipse cx="85" cy="335" rx="12" ry="9"/>
+    </g>
+    <g class="region" data-part="Right - wrist(s)">
+      <ellipse cx="215" cy="335" rx="12" ry="9"/>
+    </g>
+
+    <g class="region" data-part="chest">
+      <rect x="110" y="190" width="80" height="80" rx="25"/>
+    </g>
+    <g class="region" data-part="abdomen">
+      <rect x="115" y="270" width="70" height="80" rx="25"/>
+    </g>
+    <g class="region" data-part="right upper quadrant">
+      <rect x="115" y="270" width="35" height="40" rx="10"/>
+    </g>
+    <g class="region" data-part="left upper quadrant">
+      <rect x="150" y="270" width="35" height="40" rx="10"/>
+    </g>
+    <g class="region" data-part="right lower quadrant">
+      <rect x="115" y="310" width="35" height="40" rx="10"/>
+    </g>
+    <g class="region" data-part="left lower quadrant">
+      <rect x="150" y="310" width="35" height="40" rx="10"/>
+    </g>
+    <g class="region" data-part="epigastric">
+      <rect x="130" y="255" width="40" height="25" rx="10"/>
+    </g>
+    <g class="region" data-part="suprapublic">
+      <rect x="135" y="330" width="30" height="20" rx="10"/>
+    </g>
+    <g class="region" data-part="groin">
+      <ellipse cx="150" cy="360" rx="28" ry="20"/>
+    </g>
+    <g class="region" data-part="pelvis">
+      <rect x="120" y="350" width="60" height="45" rx="20"/>
+    </g>
+    <g class="region" data-part="Left - hip(s)">
+      <ellipse cx="135" cy="370" rx="16" ry="13"/>
+    </g>
+    <g class="region" data-part="Right - hip(s)">
+      <ellipse cx="165" cy="370" rx="16" ry="13"/>
+    </g>
+    <g class="region" data-part="genitals">
+      <ellipse cx="150" cy="374" rx="16" ry="12"/>
+    </g>
+    <g class="region" data-part="anus">
+      <ellipse cx="150" cy="390" rx="12" ry="10"/>
+    </g>
+
+    <g class="region" data-part="Left - leg">
+      <rect x="125" y="400" width="30" height="180" rx="15"/>
+    </g>
+    <g class="region" data-part="Right - leg">
+      <rect x="145" y="400" width="30" height="180" rx="15"/>
+    </g>
+    <g class="region" data-part="Left - middle of thigh">
+      <rect x="128" y="440" width="24" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Right - middle of thigh">
+      <rect x="148" y="440" width="24" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Left - knee(s)">
+      <ellipse cx="140" cy="485" rx="13" ry="11"/>
+    </g>
+    <g class="region" data-part="Right - knee(s)">
+      <ellipse cx="160" cy="485" rx="13" ry="11"/>
+    </g>
+    <g class="region" data-part="Left - middle of lower leg">
+      <rect x="128" y="515" width="24" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Right - middle of lower leg">
+      <rect x="148" y="515" width="24" height="35" rx="10"/>
+    </g>
+    <g class="region" data-part="Left - foot (feet)">
+      <ellipse cx="135" cy="610" rx="25" ry="15"/>
+    </g>
+    <g class="region" data-part="Right - foot (feet)">
+      <ellipse cx="165" cy="610" rx="25" ry="15"/>
+    </g>
+    <g class="region" data-part="Left - ankle(s)">
+      <ellipse cx="140" cy="575" rx="12" ry="8"/>
+    </g>
+    <g class="region" data-part="Right - ankle(s)">
+      <ellipse cx="160" cy="575" rx="12" ry="8"/>
+    </g>
+    <g class="region" data-part="Left - toe(s)">
+      <ellipse cx="100" cy="610" rx="10" ry="10"/>
+    </g>
+    <g class="region" data-part="Right - toe(s)">
+      <ellipse cx="200" cy="610" rx="10" ry="10"/>
+    </g>
+  </svg>

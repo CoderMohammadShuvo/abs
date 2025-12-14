@@ -3,9 +3,9 @@ import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { provider: string } }
+    { params }: { params: Promise<{ provider: string }> }
 ) {
-    const provider = params.provider
+    const { provider } = await params
 
     // This is a placeholder for OAuth integration.
     // In a real application, you would handle the OAuth callback here or initiate the flow.

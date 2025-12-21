@@ -19,7 +19,8 @@ const addContentSchema = z.object({
     duration: z.number().optional(),
     isFree: z.boolean().optional(),
     isLive: z.boolean().optional(),
-    liveUrl: z.string().optional()
+    liveUrl: z.string().optional(),
+    quizType: z.enum(['MCQ', 'CQ']).optional()
 })
 
 // POST - Add content to module
@@ -65,19 +66,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         })
         const newOrder = lastContent ? lastContent.order + 1 : 1
 
-        const content = await prisma.courseContent.create({
-            data: {
-                moduleId: id,
-                title: data.title,
-                description: data.description,
-                type: data.type,
-                url: data.url,
-                duration: data.duration,
-                isFree: data.isFree ?? false,
-                isLive: data.isLive ?? false,
-                liveUrl: data.liveUrl,
-                order: newOrder
+        // Transaction to create content and quiz if needed
+        const content = await prisma.$transaction(async (tx) => {
+            const newContent = await tx.courseContent.create({
+                data: {
+                    moduleId: id,
+                    title: data.title,
+                    description: data.description,
+                    type: data.type,
+                    url: data.url,
+                    duration: data.duration,
+                    isFree: data.isFree ?? false,
+                    isLive: data.isLive ?? false,
+                    liveUrl: data.liveUrl,
+                    order: newOrder
+                }
+            })
+
+            if (data.type === 'QUIZ' && data.quizType) {
+                await tx.quiz.create({
+                    data: {
+                        title: data.title,
+                        type: data.quizType,
+                        contentId: newContent.id,
+                        courseId: module.courseId,
+                        questions: [], // Initial empty questions
+                        timeLimit: 0
+                    }
+                })
             }
+
+            return newContent
         })
 
         return successResponse(content, 'Content added successfully', 201)

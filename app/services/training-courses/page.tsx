@@ -2,86 +2,7 @@ import AboutSection from '@/components/about/AboutTab'
 import Footer from '@/components/footer'
 import Navbar from '@/components/navbar'
 import CourseCard from '@/components/services/CourseCard'
-
-const COURSES = [
-  {
-    id: '1',
-    image: '/course1.png',
-    category: 'Course',
-    title: 'Introduction to Fintech',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-  {
-    id: '2',
-    image: '/course2.png',
-    category: 'Course',
-    title: 'Data Analysis using PLS-SEM',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-  {
-    id: '3',
-    image: '/course3.png',
-    category: 'Course',
-    title: 'Green Finance and Sustainable Banking',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-  {
-    id: '4',
-    image: '/course1.png',
-    category: 'Course',
-    title: 'Introduction to Fintech',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-  {
-    id: '5',
-    image: '/course2.png',
-    category: 'Course',
-    title: 'Data Analysis using PLS-SEM',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-  {
-    id: '6',
-    image: '/course3.png',
-    category: 'Course',
-    title: 'Green Finance and Sustainable Banking',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-  {
-    id: '7',
-    image: '/course2.png',
-    category: 'Course',
-    title: 'Data Analysis using PLS-SEM',
-    instructor: 'Tempus leo',
-    studentCount: 1357,
-    duration: '4 Weeks',
-    price: 140,
-    originalPrice: 200,
-  },
-]
+import { prisma } from '@/lib/prisma'
 
 import OfferedCourseCard from '@/components/services/OfferedCourseCard'
 import WhyChooseCard from '@/components/services/WhyChooseCard'
@@ -157,7 +78,53 @@ const WHY_CHOOSE_FEATURES = [
 ]
 
 
-export default function Trainings() {
+export default async function Trainings() {
+  let courses = []
+  let error = null
+
+  try {
+    // Fetch courses from database
+    courses = await prisma.course.findMany({
+      where: {
+        OR: [
+          { deletedAt: null },
+          { deletedAt: { isSet: false } }
+        ]
+      },
+      include: {
+        teacher: {
+          include: {
+            profile: true
+          }
+        },
+        _count: {
+          select: {
+            enrollments: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+  } catch (e: any) {
+    console.error('Error fetching courses:', e)
+    error = e.message
+  }
+
+  // Transform courses to match CourseCard interface
+  const transformedCourses = courses.map(course => ({
+    id: course.id,
+    image: course.thumbnail || '',
+    category: 'Course',
+    title: course.title,
+    instructor: course.teacher?.profile?.fullName || 'Instructor',
+    studentCount: course._count.enrollments,
+    duration: course.durationHours ? `${course.durationHours}h` : '4 Weeks',
+    price: course.price || 0,
+    originalPrice: course.price ? course.price * 1.4 : 0,
+  }))
+
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
@@ -189,12 +156,19 @@ export default function Trainings() {
 
           {/* Courses Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {COURSES.map((course) => (
-              <CourseCard
-                key={course.id}
-                {...course}
-              />
-            ))}
+            {transformedCourses.length > 0 ? (
+              transformedCourses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  {...course}
+                />
+              ))
+            ) : (
+              <div className="col-span-full py-12 text-center text-gray-500">
+                <p className="text-lg">No courses available at the moment.</p>
+                <p className="text-sm mt-2">Please check back later or contact us for more information.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

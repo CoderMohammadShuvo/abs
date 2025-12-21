@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -17,53 +17,41 @@ interface Course {
   buttonText: string
 }
 
-const FEATURED_COURSES: Course[] = [
-  {
-    id: '1',
-    image: '/course1.png',
-    title: 'Advanced React & Next.js',
-    description: 'Master modern React patterns and build scalable Next.js applications.',
-    rating: 4.9,
-    students: 2543,
-    price: 79.99,
-    buttonText: 'Enroll Now',
-  },
-  {
-    id: '2',
-    image: '/course2.png',
-    title: 'Design Systems Masterclass',
-    description: 'Create and maintain comprehensive design systems for your organization.',
-    rating: 4.8,
-    students: 1820,
-    price: 89.99,
-    buttonText: 'Enroll Now',
-  },
-  {
-    id: '3',
-    image: '/course3.png',
-    title: 'Machine Learning Bootcamp',
-    description: 'Deep dive into ML algorithms, neural networks, and practical applications.',
-    rating: 4.95,
-    students: 3210,
-    price: 99.99,
-    buttonText: 'Enroll Now',
-  },
-  {
-    id: '4',
-    image: '/course1.png',
-    title: 'Cloud Architecture AWS',
-    description: 'Design and deploy scalable applications on AWS cloud infrastructure.',
-    rating: 4.7,
-    students: 1456,
-    price: 84.99,
-    buttonText: 'Enroll Now',
-  },
-]
-
 export default function FeatureJournals() {
+  const [journals, setJournals] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
+
+  useEffect(() => {
+    const fetchJournals = async () => {
+      try {
+        const response = await fetch('/api/journals?limit=8')
+        const data = await response.json()
+
+        if (data.success && data.data) {
+          const transformedJournals: Course[] = data.data.map((journal: any) => ({
+            id: journal.id,
+            image: journal.coverImage || '/course1.png',
+            title: journal.title || journal.name,
+            description: journal.description || 'Explore this journal for cutting-edge research.',
+            rating: 4.5,
+            students: 0,
+            price: 0,
+            buttonText: 'View Journal',
+          }))
+          setJournals(transformedJournals)
+        }
+      } catch (error) {
+        console.error('Error fetching journals:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchJournals()
+  }, [])
 
   const checkScroll = () => {
     const container = scrollContainerRef.current
@@ -102,13 +90,23 @@ export default function FeatureJournals() {
             onScroll={checkScroll}
             className="flex gap-6 overflow-x-auto scroll-smooth-horizontal pb-4 pt-8"
           >
-            {FEATURED_COURSES.map((highlight) => (
-              <HighlightCard
-                key={highlight.id}
-                {...highlight}
-                onButtonClick={() => console.log(`Clicked: ${highlight.title}`)}
-              />
-            ))}
+            {loading ? (
+              <div className="flex items-center justify-center w-full py-12">
+                <p className="text-muted-foreground">Loading journals...</p>
+              </div>
+            ) : journals.length > 0 ? (
+              journals.map((journal: Course) => (
+                <HighlightCard
+                  key={journal.id}
+                  {...journal}
+                  onButtonClick={() => console.log(`Clicked: ${journal.title}`)}
+                />
+              ))
+            ) : (
+              <div className="flex items-center justify-center w-full py-12">
+                <p className="text-muted-foreground">No journals available at the moment.</p>
+              </div>
+            )}
           </div>
           <div className='flex justify-center w-full mt-8'>
             <Button className="px-6 py-3 mt-2  text-[#393F50] border bg-white rounded-none hover:bg-white">

@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Clock, Users, FileText } from 'lucide-react'
+import { Clock, Users, FileText, BookOpen } from 'lucide-react'
 
 interface CourseCardProps {
     image: string
@@ -28,16 +28,26 @@ export default function CourseCard({
     id,
     onBuyNow,
 }: CourseCardProps) {
+    // Only show images from local domain or relative paths
+    // External URLs will show the fallback icon
+    const isValidImage = image && (image.startsWith('/') || image.startsWith('http://localhost') || image.startsWith('https://localhost'))
+
     return (
         <div className="group bg-white rounded-lg overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
             {/* Image Container */}
-            <Link href={`/services/training-courses/${id}`} className="relative h-48 w-full overflow-hidden block">
-                <Image
-                    src={image}
-                    alt={title}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
+            <Link href={`/services/training-courses/${id}`} className="relative h-48 w-full overflow-hidden block bg-gray-100">
+                {isValidImage ? (
+                    <Image
+                        src={image}
+                        alt={title}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <BookOpen className="w-16 h-16 opacity-20" />
+                    </div>
+                )}
                 <div className="absolute top-4 left-4 bg-white px-3 py-1 text-xs font-medium text-gray-700 rounded-sm">
                     {category}
                 </div>
